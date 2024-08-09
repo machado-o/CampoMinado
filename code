@@ -1,0 +1,92 @@
+import pygame
+import random
+import sys
+
+# Configurações do jogo
+LARGURA = 400
+ALTURA = 400
+CELULAS = 10
+TAM_CELULA = LARGURA // CELULAS
+NUM_MINAS = 10
+
+# Cores
+BRANCO = (255, 255, 255)
+PRETO = (0, 0, 0)
+VERDE = (0, 255, 0)
+VERMELHO = (255, 0, 0)
+AZUL = (0, 0, 255)
+
+# Inicializa o Pygame
+pygame.init()
+tela = pygame.display.set_mode((LARGURA, ALTURA))
+pygame.display.set_caption('Campo Minado')
+
+# Função para criar o tabuleiro
+def criar_tabuleiro():
+    tabuleiro = [[0 for _ in range(CELULAS)] for _ in range(CELULAS)]
+    minas_pos = random.sample(range(CELULAS * CELULAS), NUM_MINAS)
+    
+    for mina in minas_pos:
+        x, y = divmod(mina, CELULAS)
+        tabuleiro[x][y] = -1
+        for i in range(max(0, x-1), min(CELULAS, x+2)):
+            for j in range(max(0, y-1), min(CELULAS, y+2)):
+                if tabuleiro[i][j] != -1:
+                    tabuleiro[i][j] += 1
+    return tabuleiro
+
+# Função para desenhar o tabuleiro
+def desenhar_tabuleiro(tabuleiro, revelar=None):
+    tela.fill(PRETO)
+    for i in range(CELULAS):
+        for j in range(CELULAS):
+            ret = pygame.Rect(j * TAM_CELULA, i * TAM_CELULA, TAM_CELULA, TAM_CELULA)
+            if revelar and revelar[i][j]:
+                if tabuleiro[i][j] == -1:
+                    pygame.draw.rect(tela, VERMELHO, ret)
+                else:
+                    pygame.draw.rect(tela, VERDE, ret)
+                    if tabuleiro[i][j] > 0:
+                        fonte = pygame.font.SysFont(None, 24)
+                        texto = fonte.render(str(tabuleiro[i][j]), True, AZUL)
+                        tela.blit(texto, (j * TAM_CELULA + TAM_CELULA // 3, i * TAM_CELULA + TAM_CELULA // 3))
+            else:
+                pygame.draw.rect(tela, BRANCO, ret)
+            pygame.draw.rect(tela, PRETO, ret, 1)
+    pygame.display.flip()
+
+# Função para revelar células
+def revelar_celulas(tabuleiro, revelar, x, y):
+    if revelar[x][y]:
+        return
+    revelar[x][y] = True
+    if tabuleiro[x][y] == 0:
+        for i in range(max(0, x-1), min(CELULAS, x+2)):
+            for j in range(max(0, y-1), min(CELULAS, y+2)):
+                revelar_celulas(tabuleiro, revelar, i, j)
+
+def main():
+    tabuleiro = criar_tabuleiro()
+    revelar = [[False for _ in range(CELULAS)] for _ in range(CELULAS)]
+    jogo_ativo = True
+    
+    while jogo_ativo:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif evento.type == pygame.MOUSEBUTTONDOWN:
+                x, y = evento.pos
+                x //= TAM_CELULA
+                y //= TAM_CELULA
+                if tabuleiro[x][y] == -1:
+                    print("Você perdeu!")
+                    jogo_ativo = False
+                else:
+                    revelar_celulas(tabuleiro, revelar, x, y)
+        
+        desenhar_tabuleiro(tabuleiro, revelar)
+        pygame.time.wait(100)
+
+if __name__ == '__main__':
+    main()
